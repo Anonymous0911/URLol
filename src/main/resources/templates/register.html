@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>URLol - Register</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0f172a; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center text-white">
+<div class="glass p-10 rounded-2xl shadow-2xl max-w-md w-full space-y-6">
+    <h2 class="text-3xl font-bold text-center text-sky-400">Create an Account</h2>
+
+    <div th:if="${error}" class="p-3 bg-red-500/20 text-red-300 rounded border border-red-500/50 text-center" th:text="${error}"></div>
+
+    <form action="/register" method="post" class="space-y-4">
+        <div>
+            <input type="text" name="name" required placeholder="Full Name"
+                   class="w-full bg-slate-800/50 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-sky-400 transition">
+        </div>
+        <div>
+            <input type="email" name="email" required placeholder="Email Address"
+                   class="w-full bg-slate-800/50 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-sky-400 transition">
+        </div>
+        <div>
+            <input type="password" name="password" required placeholder="Password"
+                   class="w-full bg-slate-800/50 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-sky-400 transition">
+        </div>
+
+        <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold py-3 rounded-lg transition shadow-[0_0_15px_rgba(16,185,129,0.4)]">
+            Sign Up
+        </button>
+    </form>
+
+    <p class="text-center text-slate-400 text-sm mt-4">
+        Already have an account? <a href="/" class="text-sky-400 hover:underline">Log in</a>
+    </p>
+</div>
+</body>
+</html>
