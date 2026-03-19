@@ -1,6 +1,5 @@
 package com.example.url_shortener.service;
 
-
 import com.example.url_shortener.model.UrlLink;
 import com.example.url_shortener.repository.UrlLinkRepository;
 import org.springframework.stereotype.Service;
@@ -12,15 +11,29 @@ import java.util.Random;
 public class UrlService {
 
     private final UrlLinkRepository repository;
-    private static final String CHARACTERS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    private static final int CODE_LENGTH = 6;
+    private final Random random = new Random();
+
+
+    private static final String[] ADJECTIVES = {
+            "Chunky", "Derpy", "Caffeinated", "Recursive", "Stochastic",
+            "Sassy", "Grumpy", "Fuzzy", "Bayesian", "Quantum",
+            "Jittery", "Lazy", "Hyper", "Iterative", "Spicy"
+    };
+
+
+    private static final String[] NOUNS = {
+            "Potato", "Penguin", "Tensor", "Algorithm", "Dinosaur",
+            "Pixel", "Waffle", "Unicorn", "Matrix", "Variable",
+            "Toaster", "Ninja", "Gradient", "Muffin", "Bug"
+    };
 
     public UrlService(UrlLinkRepository repository) {
         this.repository = repository;
     }
 
     public UrlLink createShortLink(String originalUrl, String customAlias, String userEmail) {
-        String shortCode = (customAlias != null && !customAlias.isBlank()) ? customAlias : generateRandomCode();
+        // Use the custom alias if provided, otherwise generate a funny one
+        String shortCode = (customAlias != null && !customAlias.isBlank()) ? customAlias : generateFunnyCode();
 
         if (repository.existsByShortCode(shortCode)) {
             throw new IllegalArgumentException("Alias already in use!");
@@ -46,15 +59,16 @@ public class UrlService {
         return repository.findByUserEmailOrderByCreatedAtDesc(email);
     }
 
-    private String generateRandomCode() {
-        Random random = new Random();
-        StringBuilder code;
+    private String generateFunnyCode() {
+        String code;
         do {
-            code = new StringBuilder();
-            for (int i = 0; i < CODE_LENGTH; i++) {
-                code.append(CHARACTERS.charAt(random.nextInt(CHARACTERS.length())));
-            }
-        } while (repository.existsByShortCode(code.toString()));
-        return code.toString();
+            String adj = ADJECTIVES[random.nextInt(ADJECTIVES.length)];
+            String noun = NOUNS[random.nextInt(NOUNS.length)];
+            // Adding a small random number (1-99) at the end to massively reduce collisions
+            int num = random.nextInt(99) + 1;
+            code = adj + noun + num;
+        } while (repository.existsByShortCode(code));
+
+        return code;
     }
 }
