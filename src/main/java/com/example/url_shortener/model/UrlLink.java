@@ -4,6 +4,7 @@ package com.example.url_shortener.model;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
+
 @Entity
 public class UrlLink {
 
@@ -22,7 +23,16 @@ public class UrlLink {
     private int clickCount = 0;
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    private LocalDateTime expiresAt = LocalDateTime.now().plusDays(30);
     // Getters and Setters
+    public LocalDateTime getExpiresAt() {
+        return expiresAt;
+    }
+
+    public void setExpiresAt(LocalDateTime expiresAt) {
+        this.expiresAt = expiresAt;
+    }
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getOriginalUrl() { return originalUrl; }

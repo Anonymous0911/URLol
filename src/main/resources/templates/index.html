@@ -1,73 +1,162 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-  <title>URLol - Login</title>
+  <title>URLol - Shorten your links</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { background-color: #0f172a; }
-    .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
-    .neon-text { text-shadow: 0 0 10px #38bdf8, 0 0 20px #38bdf8; }
+    body { background-color: #0B1120; font-family: 'Inter', sans-serif; }
+    .glass-card { background: rgba(30, 41, 59, 0.4); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); }
+    .neon-text { text-shadow: 0 0 15px rgba(56,189,248, 0.5); }
   </style>
 </head>
-<body class="min-h-screen flex items-center justify-center text-white">
-<div class="glass p-10 rounded-2xl shadow-2xl max-w-md w-full space-y-6">
-  <div class="text-center space-y-2">
-    <h1 class="text-5xl font-extrabold tracking-wider text-sky-400 neon-text">URLol</h1>
-<!--    <p class="text-gray-300">Condense your links. Track your impact.</p>-->
-  </div>
+<body class="text-slate-300 min-h-screen flex flex-col selection:bg-sky-500/30">
 
-  <div th:if="${param.error}" class="p-3 bg-red-500/20 text-red-300 rounded border border-red-500/50 text-center">
-    Invalid credentials or link not found.
-  </div>
-  <div th:if="${message}" class="p-3 bg-green-500/20 text-green-300 rounded border border-green-500/50 text-center" th:text="${message}"></div>
-
-  <form action="/login" method="post" class="space-y-4">
-    <div>
-      <input type="email" name="username" required placeholder="Email Address"
-             class="w-full bg-slate-800/50 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-sky-400 transition">
+<nav th:if="${#authorization.expression('isAuthenticated()')}" class="border-b border-slate-800 bg-[#0B1120]/80 backdrop-blur-md sticky top-0 z-50">
+  <div class="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
+    <h1 class="text-3xl font-extrabold tracking-wider text-sky-400 neon-text">URLol</h1>
+    <div class="flex items-center gap-6">
+      <a href="/profile" class="text-sm font-medium text-slate-400 hover:text-sky-400 transition">My Profile</a>
+      <form th:action="@{/logout}" method="post">
+        <button type="submit" class="text-sm text-slate-400 hover:text-red-400 transition flex items-center gap-2">Logout</button>
+      </form>
     </div>
-    <div>
-      <input type="password" name="password" required placeholder="Password"
-             class="w-full bg-slate-800/50 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-sky-400 transition">
-    </div>
+  </div>
+</nav>
 
-    <div class="flex items-center">
-      <input type="checkbox" id="remember-me" name="remember-me" class="w-4 h-4 text-sky-500 bg-slate-800 border-slate-600 rounded focus:ring-sky-500 focus:ring-2">
-      <label for="remember-me" class="ml-2 text-sm text-gray-300">Remember me for 7 days</label>
+<div class="flex-grow flex items-center justify-center p-6">
+
+  <div th:unless="${#authorization.expression('isAuthenticated()')}" class="glass-card p-10 rounded-3xl shadow-2xl max-w-md w-full space-y-6">
+    <div class="text-center space-y-2 mb-8">
+      <h1 class="text-5xl font-extrabold tracking-wider text-sky-400 neon-text">URLol</h1>
+      <p class="text-slate-400">Shrinking links, expanding laughs.</p>
     </div>
 
-    <button type="submit" class="w-full bg-sky-500 hover:bg-sky-400 text-slate-900 font-bold py-3 rounded-lg transition shadow-[0_0_15px_rgba(56,189,248,0.4)]">
-      Login
-    </button>
-  </form>
+    <div th:if="${param.error}" class="p-3 bg-red-900/50 text-red-300 rounded-xl border border-red-500/50 text-center text-sm">Invalid credentials.</div>
+    <div th:if="${message}" class="p-3 bg-emerald-900/50 text-emerald-300 rounded-xl border border-emerald-500/50 text-center text-sm" th:text="${message}"></div>
 
-  <div class="relative flex py-2 items-center">
-    <div class="flex-grow border-t border-slate-600"></div>
-    <span class="flex-shrink-0 mx-4 text-slate-400 text-sm">OR</span>
-    <div class="flex-grow border-t border-slate-600"></div>
+    <form action="/login" method="post" class="space-y-4">
+      <div>
+        <input type="text" name="username" required placeholder="Email or Username"
+               class="w-full bg-[#0f172a]/80 border border-slate-700 rounded-xl px-4 py-3.5 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 transition shadow-inner">
+      </div>
+      <div>
+        <input type="password" name="password" required placeholder="Password"
+               class="w-full bg-[#0f172a]/80 border border-slate-700 rounded-xl px-4 py-3.5 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 transition shadow-inner">
+      </div>
+
+      <div class="flex items-center pl-1">
+        <input type="checkbox" id="remember-me" name="remember-me"
+               class="w-4 h-4 text-sky-500 bg-slate-800 border-slate-600 rounded focus:ring-sky-500 focus:ring-offset-slate-900 transition cursor-pointer">
+        <label for="remember-me" class="ml-2 text-sm text-slate-400 cursor-pointer select-none hover:text-slate-300 transition">
+          Remember me for 7 days
+        </label>
+      </div>
+
+      <button type="submit" class="w-full bg-sky-500 hover:bg-sky-400 text-slate-900 font-bold py-3.5 rounded-xl transition shadow-[0_0_20px_rgba(56,189,248,0.3)] mt-2">
+        Login
+      </button>
+    </form>
+
+    <div class="relative flex py-2 items-center">
+      <div class="flex-grow border-t border-slate-700"></div>
+      <span class="flex-shrink-0 mx-4 text-slate-500 text-sm font-medium">OR</span>
+      <div class="flex-grow border-t border-slate-700"></div>
+    </div>
+
+    <div class="space-y-3">
+      <a href="/oauth2/authorization/github"
+         class="flex justify-center items-center w-full py-3.5 px-4 bg-[#0f172a]/80 hover:bg-slate-800 text-white font-semibold rounded-xl border border-slate-700 transition shadow-inner">
+        <svg class="w-5 h-5 inline mr-3" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd"></path></svg>
+        Continue with GitHub
+      </a>
+
+      <a href="/oauth2/authorization/google"
+         class="flex justify-center items-center w-full py-3.5 px-4 bg-white hover:bg-gray-100 text-slate-900 font-semibold rounded-xl border border-slate-300 transition shadow-[0_0_15px_rgba(255,255,255,0.05)]">
+        <svg class="w-5 h-5 inline mr-3" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+          <path fill="none" d="M1 1h22v22H1z"/>
+        </svg>
+        Continue with Google
+      </a>
+    </div>
+
+    <p class="text-center text-slate-500 text-sm mt-6">
+      Don't have an account? <a href="/register" class="text-sky-400 hover:underline font-medium">Sign up</a>
+    </p>
   </div>
 
-  <a href="/oauth2/authorization/github"
-     class="flex justify-center items-center w-full py-3 px-4 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-lg border border-slate-600 transition">
-    <svg class="w-5 h-5 inline mr-2" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd"></path></svg>
-    Continue with GitHub
-  </a>
 
-  <a href="/oauth2/authorization/google"
-     class="flex justify-center items-center w-full mt-3 py-3 px-4 bg-white hover:bg-gray-100 text-slate-900 font-semibold rounded-lg border border-slate-300 transition shadow-[0_0_15px_rgba(255,255,255,0.1)]">
-    <svg class="w-5 h-5 inline mr-2" viewBox="0 0 24 24">
-      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-      <path fill="none" d="M1 1h22v22H1z"/>
-    </svg>
-    Continue with Google
-  </a>
+  <div th:if="${#authorization.expression('isAuthenticated()')}" class="w-full max-w-3xl space-y-8 mt-[-10vh]">
 
-  <p class="text-center text-slate-400 text-sm mt-4">
-    Don't have an account? <a href="/register" class="text-sky-400 hover:underline">Sign up</a>
-  </p>
+    <div class="text-center space-y-3 mb-10">
+      <h2 class="text-4xl md:text-5xl font-extrabold text-white tracking-tight">Make it short.</h2>
+      <p class="text-slate-400 text-lg">Paste your long URL below to generate a tracking-enabled link.</p>
+      <div th:if="${error}" class="p-3 bg-red-900/50 text-red-300 rounded-xl border border-red-500/50 text-center text-sm mt-4" th:text="${error}"></div>
+    </div>
+
+    <div class="glass-card p-6 rounded-2xl relative overflow-hidden">
+      <form action="/shorten" method="post" class="flex flex-col md:flex-row gap-4 relative z-10">
+        <div class="flex-grow">
+          <input type="url" name="originalUrl" required placeholder="https://your-very-long-url.com"
+                 class="w-full bg-[#0f172a]/80 border border-slate-700 rounded-xl px-4 py-4 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 transition shadow-inner text-lg">
+        </div>
+        <div class="md:w-48">
+          <input type="text" name="customAlias" placeholder="Custom alias" pattern="[a-zA-Z0-9_-]+" title="Alphanumeric characters, underscores, and hyphens only"
+                 class="w-full bg-[#0f172a]/80 border border-slate-700 rounded-xl px-4 py-4 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 transition shadow-inner text-lg">
+        </div>
+        <button type="submit" class="bg-sky-500 hover:bg-sky-400 text-slate-900 font-bold px-8 py-4 rounded-xl transition shadow-[0_0_20px_rgba(56,189,248,0.4)] text-lg">
+          Shorten
+        </button>
+      </form>
+    </div>
+
+    <div th:if="${latestLink}" class="glass-card p-6 rounded-2xl border border-emerald-500/30 bg-emerald-900/10">
+      <p class="text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-3">Your Latest Link</p>
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div class="overflow-hidden w-full md:w-auto">
+          <a th:href="@{|/${latestLink.shortCode}|}" target="_blank" class="text-2xl font-bold text-white hover:text-sky-400 transition truncate block"
+             th:id="|link-${latestLink.shortCode}|" th:text="|localhost:8080/${latestLink.shortCode}|"></a>
+          <p class="text-slate-500 text-sm truncate mt-1 max-w-lg" th:text="${latestLink.originalUrl}"></p>
+        </div>
+
+        <div class="flex gap-3 shrink-0 mt-2 md:mt-0">
+          <button th:data-copy-id="|link-${latestLink.shortCode}|"
+                  onclick="copyLink(this.getAttribute('data-copy-id'))"
+                  class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition border border-slate-600 font-medium text-sm">
+            Copy
+          </button>
+          <a th:href="@{|/qr/${latestLink.shortCode}|}" target="_blank" class="px-4 py-2 bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 rounded-lg transition border border-sky-500/50 font-medium text-sm flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
+            QR Code
+          </a>
+        </div>
+      </div>
+    </div>
+
+  </div>
 </div>
+
+<script>
+  function copyLink(elementId) {
+    const linkText = document.getElementById(elementId).innerText;
+    navigator.clipboard.writeText(linkText).then(() => {
+      // A simple visual feedback that the copy worked
+      const btn = event.target;
+      const originalText = btn.innerText;
+      btn.innerText = 'Copied!';
+      btn.classList.replace('bg-slate-800', 'bg-emerald-600');
+      btn.classList.replace('hover:bg-slate-700', 'hover:bg-emerald-500');
+
+      setTimeout(() => {
+        btn.innerText = originalText;
+        btn.classList.replace('bg-emerald-600', 'bg-slate-800');
+        btn.classList.replace('hover:bg-emerald-500', 'hover:bg-slate-700');
+      }, 2000);
+    });
+  }
+</script>
 </body>
 </html>

@@ -2,6 +2,9 @@ package com.example.url_shortener.controller;
 
 import com.example.url_shortener.model.AppUser;
 import com.example.url_shortener.model.UrlLink;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import com.example.url_shortener.service.QrCodeService;
 import com.example.url_shortener.repository.AppUserRepository;
 import com.example.url_shortener.service.UrlService;
 import org.springframework.security.core.Authentication;
@@ -13,6 +16,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.List;
 import java.util.Optional;
 
 @Controller
@@ -21,57 +25,115 @@ public class WebController {
     private final UrlService urlService;
     private final AppUserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final QrCodeService qrCodeService;
 
-    public WebController(UrlService urlService, AppUserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public WebController(UrlService urlService, AppUserRepository userRepository,
+                         PasswordEncoder passwordEncoder, QrCodeService qrCodeService) {
         this.urlService = urlService;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.qrCodeService = qrCodeService;
     }
 
     // --- FRONTEND VIEWS ---
 
     @GetMapping("/")
-    public String index(Authentication authentication) {
-        if (authentication != null && authentication.isAuthenticated()) {
-            return "redirect:/dashboard";
+    public String index(Authentication authentication, Model model) {
+        if (authentication != null && authentication.isAuthenticated() && !authentication.getPrincipal().equals("anonymousUser")) {
+            // User is logged in! Fetch their details and their most recent link
+            String userId = extractUserId(authentication);
+            model.addAttribute("name", extractUserName(authentication));
+
+            // Fetch the latest link
+            Optional<UrlLink> latestLink = urlService.getLatestUserLink(userId);
+            latestLink.ifPresent(link -> model.addAttribute("latestLink", link));
         }
         return "index";
     }
 
+    @GetMapping("/profile")
+    public String profile(Authentication authentication, Model model) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return "redirect:/";
+        }
+
+        String userId = extractUserId(authentication);
+        List<UrlLink> userLinks = urlService.getUserLinks(userId);
+
+        int totalClicks = userLinks.stream().mapToInt(UrlLink::getClickCount).sum();
+
+        model.addAttribute("name", extractUserName(authentication));
+        model.addAttribute("links", userLinks);
+        model.addAttribute("totalClicks", totalClicks);
+
+        return "profile";
+    }
+    @PostMapping("/update-password")
+    public String updatePassword(@RequestParam String currentPassword,
+                                 @RequestParam String newPassword,
+                                 Authentication authentication,
+                                 RedirectAttributes redirectAttributes) {
+
+        String identifier = extractUserId(authentication);
+        Optional<AppUser> userOpt = userRepository.findByEmailOrUsername(identifier, identifier);
+
+        if (userOpt.isPresent()) {
+            AppUser user = userOpt.get();
+
+            // Safety check: If they registered via OAuth2, they won't have a password in the DB
+            if (user.getPassword() == null) {
+                redirectAttributes.addFlashAttribute("error", "You logged in via Google/GitHub. You cannot change your password here.");
+                return "redirect:/profile";
+            }
+
+            // Verify current password is correct
+            if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+                redirectAttributes.addFlashAttribute("error", "Incorrect current password.");
+                return "redirect:/profile";
+            }
+
+            // Update to new password
+            user.setPassword(passwordEncoder.encode(newPassword));
+            userRepository.save(user);
+            redirectAttributes.addFlashAttribute("message", "Password updated successfully!");
+        } else {
+            redirectAttributes.addFlashAttribute("error", "User not found.");
+        }
+        return "redirect:/profile";
+    }
+
+    // NEW: This serves the actual HTML page when someone clicks "Sign up"
     @GetMapping("/register")
     public String registerPage(Authentication authentication) {
-        if (authentication != null && authentication.isAuthenticated()) {
-            return "redirect:/dashboard";
+        // If they are already logged in, send them to the home page
+        if (authentication != null && authentication.isAuthenticated() && !authentication.getPrincipal().equals("anonymousUser")) {
+            return "redirect:/";
         }
         return "register";
     }
 
     @PostMapping("/register")
-    public String registerUser(@RequestParam String name, @RequestParam String email,
-                               @RequestParam String password, RedirectAttributes redirectAttributes) {
+    public String registerUser(@RequestParam String name, @RequestParam String username,
+                               @RequestParam String email, @RequestParam String password,
+                               RedirectAttributes redirectAttributes) {
         if (userRepository.existsByEmail(email)) {
             redirectAttributes.addFlashAttribute("error", "Email already in use!");
+            return "redirect:/register";
+        }
+        if (userRepository.existsByUsername(username)) {
+            redirectAttributes.addFlashAttribute("error", "Username already taken!");
             return "redirect:/register";
         }
 
         AppUser newUser = new AppUser();
         newUser.setName(name);
+        newUser.setUsername(username); // Save username
         newUser.setEmail(email);
-        newUser.setPassword(passwordEncoder.encode(password)); // Hash password!
+        newUser.setPassword(passwordEncoder.encode(password));
         userRepository.save(newUser);
 
         redirectAttributes.addFlashAttribute("message", "Registration successful! Please login.");
         return "redirect:/";
-    }
-
-    @GetMapping("/dashboard")
-    public String dashboard(Authentication authentication, Model model) {
-        String userId = extractUserId(authentication);
-        String name = extractUserName(authentication);
-
-        model.addAttribute("name", name);
-        model.addAttribute("links", urlService.getUserLinks(userId));
-        return "dashboard";
     }
 
     @PostMapping("/shorten")
@@ -86,19 +148,24 @@ public class WebController {
         } catch (IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("error", e.getMessage());
         }
-        return "redirect:/dashboard";
+        return "redirect:/";
     }
 
     // --- REDIRECT LOGIC ---
     @GetMapping("/{shortCode}")
     public String redirect(@PathVariable String shortCode) {
-        Optional<UrlLink> link = urlService.getOriginalUrl(shortCode);
-        if (link.isPresent()) {
-            String original = link.get().getOriginalUrl();
-            if (!original.startsWith("http://") && !original.startsWith("https://")) {
-                original = "https://" + original;
+        // 1. Fetch from Redis Cache (or MySQL if not cached yet)
+        String originalUrl = urlService.getCachedUrl(shortCode);
+
+        if (originalUrl != null) {
+            // 2. Fire and forget the click analytics in the background
+            urlService.incrementClickCountAsync(shortCode);
+
+            // 3. Format and Redirect
+            if (!originalUrl.startsWith("http://") && !originalUrl.startsWith("https://")) {
+                originalUrl = "https://" + originalUrl;
             }
-            return "redirect:" + original;
+            return "redirect:" + originalUrl;
         }
         return "redirect:/?error=notfound";
     }
@@ -108,7 +175,7 @@ public class WebController {
         if (authentication.getPrincipal() instanceof OAuth2User oauth2User) {
             return oauth2User.getAttribute("login") != null ? oauth2User.getAttribute("login") : oauth2User.getAttribute("email");
         } else if (authentication.getPrincipal() instanceof UserDetails userDetails) {
-            return userDetails.getUsername(); // We use email as username
+            return userDetails.getUsername(); // We use email/username as the identifier
         }
         return "anonymous";
     }
@@ -117,10 +184,23 @@ public class WebController {
         if (authentication.getPrincipal() instanceof OAuth2User oauth2User) {
             return oauth2User.getAttribute("name");
         } else if (authentication.getPrincipal() instanceof UserDetails userDetails) {
-            // Fetch name from DB
-            return userRepository.findByEmail(userDetails.getUsername())
+            // Fetch name from DB using the new method we created!
+            String identifier = userDetails.getUsername();
+            return userRepository.findByEmailOrUsername(identifier, identifier)
                     .map(AppUser::getName).orElse("User");
         }
         return "User";
+    }
+
+    // --- QR GENERATION ---
+    @GetMapping(value = "/qr/{shortCode}", produces = MediaType.IMAGE_PNG_VALUE)
+    @ResponseBody
+    public ResponseEntity<byte[]> getQrCode(@PathVariable String shortCode) {
+        String fullUrl = "http://localhost:8080/" + shortCode;
+
+        // Generate a 250x250 pixel QR code
+        byte[] imageBytes = qrCodeService.generateQrCodeImage(fullUrl, 250, 250);
+
+        return ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).body(imageBytes);
     }
 }

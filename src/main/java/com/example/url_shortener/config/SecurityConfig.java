@@ -35,14 +35,14 @@ public class SecurityConfig {
                 .formLogin(form -> form
                         .loginPage("/") // Use our custom index page
                         .loginProcessingUrl("/login") // Spring handles this automatically
-                        .defaultSuccessUrl("/dashboard", true)
+                        .defaultSuccessUrl("/", true)
                         .failureUrl("/?error=bad_credentials")
                         .permitAll()
                 )
                 // OAuth2 Login
                 .oauth2Login(oauth2 -> oauth2
                         .loginPage("/")
-                        .defaultSuccessUrl("/dashboard", true)
+                        .defaultSuccessUrl("/", true)
                 )
                 // Remember Me Configuration
                 .rememberMe(rememberMe -> rememberMe

@@ -2,6 +2,9 @@ package com.example.url_shortener.service;
 
 import com.example.url_shortener.model.UrlLink;
 import com.example.url_shortener.repository.UrlLinkRepository;
+
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
@@ -32,7 +35,6 @@ public class UrlService {
     }
 
     public UrlLink createShortLink(String originalUrl, String customAlias, String userEmail) {
-        // Use the custom alias if provided, otherwise generate a funny one
         String shortCode = (customAlias != null && !customAlias.isBlank()) ? customAlias : generateFunnyCode();
 
         if (repository.existsByShortCode(shortCode)) {
@@ -46,19 +48,26 @@ public class UrlService {
         return repository.save(link);
     }
 
-    public Optional<UrlLink> getOriginalUrl(String shortCode) {
-        Optional<UrlLink> linkOpt = repository.findByShortCode(shortCode);
-        linkOpt.ifPresent(link -> {
+    // NEW: This method is cached! If it finds the shortCode in Redis, it skips MySQL entirely.
+    @Cacheable(value = "urls", key = "#shortCode", unless = "#result == null")
+    public String getCachedUrl(String shortCode) {
+        return repository.findByShortCode(shortCode)
+                .map(UrlLink::getOriginalUrl)
+                .orElse(null);
+    }
+
+    // NEW: This runs in a separate background thread so it doesn't slow down the redirect
+    @Async
+    public void incrementClickCountAsync(String shortCode) {
+        repository.findByShortCode(shortCode).ifPresent(link -> {
             link.setClickCount(link.getClickCount() + 1);
             repository.save(link);
         });
-        return linkOpt;
     }
 
     public List<UrlLink> getUserLinks(String email) {
         return repository.findByUserEmailOrderByCreatedAtDesc(email);
     }
-
     private String generateFunnyCode() {
         String code;
         do {
@@ -70,5 +79,8 @@ public class UrlService {
         } while (repository.existsByShortCode(code));
 
         return code;
+    }
+    public Optional<UrlLink> getLatestUserLink(String email) {
+        return repository.findFirstByUserEmailOrderByCreatedAtDesc(email);
     }
 }
