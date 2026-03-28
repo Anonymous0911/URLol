@@ -15,6 +15,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
 import java.util.Optional;
@@ -193,14 +194,31 @@ public class WebController {
     }
 
     // --- QR GENERATION ---
+//    @GetMapping(value = "/qr/{shortCode}", produces = MediaType.IMAGE_PNG_VALUE)
+//    @ResponseBody
+//    public ResponseEntity<byte[]> getQrCode(@PathVariable String shortCode) {
+//        String fullUrl = "http://localhost:8080/" + shortCode;
+//
+//        // Generate a 250x250 pixel QR code
+//        byte[] imageBytes = qrCodeService.generateQrCodeImage(fullUrl, 250, 250);
+//
+//        return ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).body(imageBytes);
+//    }
+
+
     @GetMapping(value = "/qr/{shortCode}", produces = MediaType.IMAGE_PNG_VALUE)
     @ResponseBody
-    public ResponseEntity<byte[]> getQrCode(@PathVariable String shortCode) {
-        String fullUrl = "http://localhost:8080/" + shortCode;
+    public ResponseEntity<byte[]> getQrCode(@PathVariable String shortCode, jakarta.servlet.http.HttpServletRequest request) {
 
-        // Generate a 250x250 pixel QR code
+        // Dynamically get the base URL (e.g., http://localhost:8080 OR https://your-app.onrender.com)
+        String scheme = request.getHeader("X-Forwarded-Proto"); // Catches Render's HTTPS proxy
+        if (scheme == null) {
+            scheme = request.getScheme(); // Falls back to local HTTP
+        }
+        String serverName = request.getServerName();
+        String fullUrl = scheme + "://" + serverName + "/" + shortCode;
+
         byte[] imageBytes = qrCodeService.generateQrCodeImage(fullUrl, 250, 250);
-
         return ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).body(imageBytes);
     }
 }
