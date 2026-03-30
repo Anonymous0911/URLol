@@ -1,46 +1,102 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>URLol - Register</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - URLol</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body { background-color: #0f172a; }
-        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
-    </style>
 </head>
-<body class="min-h-screen flex items-center justify-center text-white">
-<div class="glass p-10 rounded-2xl shadow-2xl max-w-md w-full space-y-6">
-    <h2 class="text-3xl font-bold text-center text-sky-400">Create an Account</h2>
+<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center">
 
-    <div th:if="${error}" class="p-3 bg-red-500/20 text-red-300 rounded border border-red-500/50 text-center" th:text="${error}"></div>
+<div class="bg-gray-800 p-8 rounded-lg shadow-lg w-full max-w-md border border-gray-700">
+    <h2 class="text-3xl font-bold text-center text-blue-400 mb-6">Create Account</h2>
 
-    <form action="/register" method="post" class="space-y-4">
+    <form action="/register" method="POST" class="space-y-5">
+
         <div>
-            <input type="text" name="name" required placeholder="Full Name"
-                   class="w-full bg-slate-800/50 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-sky-400 transition">
-        </div>
-        <div>
-            <input type="text" name="username" required placeholder="Choose a Username"
-                   pattern="[a-zA-Z0-9_-]+" title="Alphanumeric, underscores, and hyphens only"
-                   class="w-full bg-[#0f172a]/80 border border-slate-700 rounded-xl px-4 py-3.5 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 transition shadow-inner">
-        </div>
-        <div>
-            <input type="email" name="email" required placeholder="Email Address"
-                   class="w-full bg-slate-800/50 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-sky-400 transition">
-        </div>
-        <div>
-            <input type="password" name="password" required placeholder="Password"
-                   class="w-full bg-slate-800/50 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-sky-400 transition">
+            <label for="username" class="block text-sm font-medium text-gray-300">Choose a Username</label>
+            <input type="text" id="username" name="username"
+                   class="mt-1 block w-full px-4 py-2 rounded-md bg-gray-900 border border-gray-600 focus:ring-blue-500 focus:border-blue-500 text-white"
+                   placeholder="e.g. urlol_master" required>
+
+            <div id="username-feedback" class="text-sm mt-1 transition-all h-5"></div>
+            <div id="suggestions-container" class="hidden mt-2 flex flex-wrap gap-2"></div>
         </div>
 
-        <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold py-3 rounded-lg transition shadow-[0_0_15px_rgba(16,185,129,0.4)]">
+        <div>
+            <label for="email" class="block text-sm font-medium text-gray-300">Email Address</label>
+            <input type="email" id="email" name="email"
+                   class="mt-1 block w-full px-4 py-2 rounded-md bg-gray-900 border border-gray-600 focus:ring-blue-500 focus:border-blue-500 text-white"
+                   required>
+        </div>
+
+        <div>
+            <label for="password" class="block text-sm font-medium text-gray-300">Password</label>
+            <input type="password" id="password" name="password"
+                   class="mt-1 block w-full px-4 py-2 rounded-md bg-gray-900 border border-gray-600 focus:ring-blue-500 focus:border-blue-500 text-white"
+                   required>
+        </div>
+
+        <button type="submit" id="submit-btn" disabled
+                class="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold rounded-md transition-colors">
             Sign Up
         </button>
     </form>
 
-    <p class="text-center text-slate-400 text-sm mt-4">
-        Already have an account? <a href="/" class="text-sky-400 hover:underline">Log in</a>
+    <p class="mt-6 text-center text-sm text-gray-400">
+        Already have an account? <a href="/" class="text-blue-400 hover:text-blue-300">Log in here</a>.
     </p>
 </div>
+
+<script>
+    const usernameInput = document.getElementById('username');
+    const feedback = document.getElementById('username-feedback');
+    const suggestionsContainer = document.getElementById('suggestions-container');
+    const submitBtn = document.getElementById('submit-btn');
+
+    usernameInput.addEventListener('input', async (e) => {
+        const username = e.target.value.trim();
+
+        if (username.length < 3) {
+            feedback.textContent = 'Username must be at least 3 characters.';
+            feedback.className = 'text-sm mt-1 text-gray-400';
+            suggestionsContainer.classList.add('hidden');
+            submitBtn.disabled = true;
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/users/check-username?username=${username}`);
+            const data = await response.json();
+
+            if (data.available) {
+                feedback.textContent = '✅ Username is available!';
+                feedback.className = 'text-sm mt-1 text-green-400';
+                suggestionsContainer.classList.add('hidden');
+                submitBtn.disabled = false;
+            } else {
+                feedback.textContent = '❌ Username is taken. Try one of these:';
+                feedback.className = 'text-sm mt-1 text-red-400';
+                submitBtn.disabled = true;
+
+                suggestionsContainer.innerHTML = data.suggestions.map(suggestion =>
+                    `<button type="button" onclick="applySuggestion('${suggestion}')"
+                                 class="px-3 py-1 bg-gray-700 hover:bg-blue-600 text-blue-300 hover:text-white text-xs rounded-full transition-colors border border-gray-600">
+                            ${suggestion}
+                        </button>`
+                ).join('');
+
+                suggestionsContainer.classList.remove('hidden');
+            }
+        } catch (error) {
+            console.error("Error checking username:", error);
+        }
+    });
+
+    function applySuggestion(suggestion) {
+        usernameInput.value = suggestion;
+        usernameInput.dispatchEvent(new Event('input'));
+    }
+</script>
 </body>
 </html>
