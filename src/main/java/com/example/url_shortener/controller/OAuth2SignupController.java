@@ -44,6 +44,8 @@ public class OAuth2SignupController {
         AppUser newUser = new AppUser();
         newUser.setEmail(email);
         newUser.setUsername(username);
+        newUser.setPassword("OAUTH_USER_NO_PASSWORD");
+
         userRepository.save(newUser);
 
         // Clean up the temporary session data
