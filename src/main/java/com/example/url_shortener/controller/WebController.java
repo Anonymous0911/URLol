@@ -106,17 +106,19 @@ public class WebController {
     // NEW: This serves the actual HTML page when someone clicks "Sign up"
     @GetMapping("/register")
     public String registerPage(Authentication authentication) {
-        // If they are already logged in, send them to the home page
+        // If they are already logged in, send them to the dashboard
         if (authentication != null && authentication.isAuthenticated() && !authentication.getPrincipal().equals("anonymousUser")) {
-            return "redirect:/";
+            return "redirect:/profile"; // Assuming /profile is your dashboard
         }
         return "register";
     }
 
     @PostMapping("/register")
-    public String registerUser(@RequestParam String name, @RequestParam String username,
-                               @RequestParam String email, @RequestParam String password,
+    public String registerUser(@RequestParam String username,
+                               @RequestParam String email,
+                               @RequestParam String password,
                                RedirectAttributes redirectAttributes) {
+
         if (userRepository.existsByEmail(email)) {
             redirectAttributes.addFlashAttribute("error", "Email already in use!");
             return "redirect:/register";
@@ -127,14 +129,19 @@ public class WebController {
         }
 
         AppUser newUser = new AppUser();
-        newUser.setName(name);
-        newUser.setUsername(username); // Save username
+        // newUser.setName(name); <-- Removed unless you add it to your HTML form!
+        newUser.setUsername(username);
         newUser.setEmail(email);
         newUser.setPassword(passwordEncoder.encode(password));
         userRepository.save(newUser);
 
+        // Redirect to the new dedicated login page!
         redirectAttributes.addFlashAttribute("message", "Registration successful! Please login.");
-        return "redirect:/";
+        return "redirect:/login";
+    }
+    @GetMapping("/login")
+    public String showLoginPage() {
+        return "login"; // This looks for login.html in templates folder
     }
 
     @PostMapping("/shorten")

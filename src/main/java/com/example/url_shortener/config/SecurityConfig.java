@@ -19,7 +19,7 @@ public class SecurityConfig {
 
     private final CustomUserDetailsService userDetailsService;
     private final ClientRegistrationRepository clientRegistrationRepository;
-    private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler; // <-- NEW BOUNCER INJECTED
+    private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
 
     // Inject the required services/repositories
     public SecurityConfig(CustomUserDetailsService userDetailsService,
@@ -40,22 +40,23 @@ public class SecurityConfig {
         http
                 // 1. Single, clean authorizeHttpRequests block
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/register", "/error", "/api/users/check-username", "/complete-signup", "/{shortCode:[a-zA-Z0-9_-]+}").permitAll()
+                        // ADDED "/login" here so unauthenticated users can actually see the page!
+                        .requestMatchers("/", "/login", "/register", "/error", "/api/users/check-username", "/complete-signup", "/{shortCode:[a-zA-Z0-9_-]+}").permitAll()
                         .anyRequest().authenticated()
                 )
 
                 // 2. Standard Form Login
                 .formLogin(form -> form
-                        .loginPage("/") // Use our custom index page
+                        .loginPage("/login") // <-- Points to the new dedicated login page
                         .loginProcessingUrl("/login") // Spring handles this automatically
-                        .defaultSuccessUrl("/", true)
-                        .failureUrl("/?error=bad_credentials")
+                        .defaultSuccessUrl("/profile", true) // Send them straight to the dashboard!
+                        .failureUrl("/login?error=true") // Send them back to the login page on failure
                         .permitAll()
                 )
 
                 // 3. OAuth2 Login (Google & GitHub)
                 .oauth2Login(oauth2 -> oauth2
-                        .loginPage("/")
+                        .loginPage("/login") // <-- Points to the new dedicated login page
                         // Force Google to show the account selection screen
                         .authorizationEndpoint(authorization -> authorization
                                 .authorizationRequestResolver(customAuthorizationRequestResolver())
@@ -74,7 +75,7 @@ public class SecurityConfig {
 
                 // 5. Logout Configuration
                 .logout(logout -> logout
-                        .logoutSuccessUrl("/")
+                        .logoutSuccessUrl("/login?logout=true") // Send back to login page with success message
                         .deleteCookies("JSESSIONID", "remember-me")
                         .permitAll()
                 )
